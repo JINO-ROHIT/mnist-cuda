@@ -11,7 +11,8 @@
 #include <array>
 #include <stdint.h>
 #include <string>
-
+#include <random>
+#include <algorithm>
 
 constexpr int IMAGE_ROWS = 28; //make it known at compile time
 constexpr int IMAGE_COLS = 28;
@@ -29,7 +30,7 @@ uint32_t read_uint32(std::ifstream& file){
 }
 
 
-std::vector<MNISTSample> load_mnist_dataset(
+std::vector<MNISTSample> load_mnist_dataset( //can we simplify this?
     const std::string& image_path,
     const std::string& label_path
 ) {
@@ -75,6 +76,52 @@ std::vector<MNISTSample> load_mnist_dataset(
 }
 
 
+class DataLoader {
+private:
+    std::vector<MNISTSample>& dataset; // point to the dataset
+    size_t batch_size;
+    bool shuffle;
+    std::vector<size_t> indices;
+    size_t current_idx;
+    std::mt19937 rng;
+
+public:
+    DataLoader(std::vector<MNISTSample>& data, size_t batch_sz, bool shuf = true)
+        : dataset(data), batch_size(batch_sz), shuffle(shuf), current_idx(0), rng(std::random_device{}()) {
+        indices.resize(dataset.size());
+        for (size_t i = 0; i < indices.size(); ++i){
+            indices[i] = i;
+        }
+        if (shuffle) std::shuffle(indices.begin(), indices.end(), rng);
+    }
+
+    std::vector<MNISTSample*> next_batch() {
+        if (current_idx >= dataset.size()) return {};
+        
+        std::vector<MNISTSample*> batch;
+        size_t end = std::min(current_idx + batch_size, dataset.size());
+        
+        for (size_t i = current_idx; i < end; ++i)
+            batch.push_back(&dataset[indices[i]]);
+        
+        current_idx = end;
+        return batch;
+    }
+
+    void reset() {
+        current_idx = 0;
+        if (shuffle) std::shuffle(indices.begin(), indices.end(), rng);
+    }
+
+    bool has_next() const {
+        return current_idx < dataset.size();
+    }
+
+    size_t num_batches() const {
+        return (dataset.size() + batch_size - 1) / batch_size;
+    }
+};
+
 int main() {
     try {
         auto train_data = load_mnist_dataset(
@@ -83,15 +130,28 @@ int main() {
         );
 
         std::cout << "Loaded " << train_data.size() << " samples.\n";
-        std::cout << "First label: " << static_cast<int>(train_data[0].label) << "\n";
 
-        // first image
-        const auto& sample = train_data[0];
-        for (int i = 0; i < IMAGE_SIZE; ++i) {
-            if (i % IMAGE_COLS == 0) std::cout << "\n";
-            std::cout << (sample.pixels[i] > 0.5f ? '#' : '.');
+        DataLoader loader(train_data, 32, true); // batch_size = 32, shuffle = true
+        
+        int epoch = 0;
+        while (epoch < 3) {
+            std::cout << "\n=== Epoch " << epoch + 1 << " ===\n";
+            
+            int batch_num = 0;
+            while (loader.has_next()) {
+                auto batch = loader.next_batch();
+                
+                if (batch_num % 100 == 0) {
+                    std::cout << "Batch " << batch_num << "/" << loader.num_batches() 
+                              << " - Size: " << batch.size() << "\n";
+                }
+                
+                batch_num++;
+            }
+            
+            loader.reset(); // Reset for next epoch
+            epoch++;
         }
-        std::cout << "\n";
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
