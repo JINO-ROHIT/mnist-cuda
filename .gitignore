@@ -9,4 +9,5 @@ data/
 
 mnist
 mnist_test
+mnist_train
 model

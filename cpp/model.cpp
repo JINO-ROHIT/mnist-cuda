@@ -90,3 +90,115 @@ std::vector<float> MLPNet::forward(const std::vector<float>& x) {
 
     return logits;
 }
+
+void MLPNet::backward(const std::vector<float>& x, int target_label) {
+    float max_logit = *std::max_element(logits.begin(), logits.end());
+    std::vector<float> probs(10);
+    float sum_exp = 0.0f;
+    for (int i = 0; i < 10; ++i) {
+        probs[i] = std::exp(logits[i] - max_logit);
+        sum_exp += probs[i];
+    }
+    for (int i = 0; i < 10; ++i) {
+        probs[i] /= sum_exp;
+    }
+    
+    std::vector<float> grad_logits = probs;
+    grad_logits[target_label] -= 1.0f;
+    
+    // backward through layer 4
+    auto grad_out3 = l4.backward(grad_logits);
+    
+    // backward through ReLU 3
+    for (size_t i = 0; i < grad_out3.size(); ++i) {
+        grad_out3[i] *= relu_derivative(out3_pre_relu[i]);
+    }
+    
+    // backward through layer 3
+    auto grad_out2 = l3.backward(grad_out3);
+    
+    // backward through ReLU 2
+    for (size_t i = 0; i < grad_out2.size(); ++i) {
+        grad_out2[i] *= relu_derivative(out2_pre_relu[i]);
+    }
+    
+    // backward through layer 2
+    auto grad_out1 = l2.backward(grad_out2);
+    
+    // backward through ReLU 1
+    for (size_t i = 0; i < grad_out1.size(); ++i) {
+        grad_out1[i] *= relu_derivative(out1_pre_relu[i]);
+    }
+    
+    // backward through layer 1
+    l1.backward(grad_out1);
+}
+
+void MLPNet::zero_grad() {
+    l1.zero_grad();
+    l2.zero_grad();
+    l3.zero_grad();
+    l4.zero_grad();
+}
+
+void MLPNet::update(float learning_rate) {
+    l1.update(learning_rate);
+    l2.update(learning_rate);
+    l3.update(learning_rate);
+    l4.update(learning_rate);
+}
+
+int MLPNet::predict(const std::vector<float>& logits) const {
+    return std::distance(logits.begin(), 
+                       std::max_element(logits.begin(), logits.end()));
+}
+
+float MLPNet::compute_accuracy(const std::vector<MNISTSample*>& batch) {
+    int correct = 0;
+    
+    for (const auto* sample : batch) {
+        std::vector<float> input(sample->pixels.begin(), sample->pixels.end());
+        auto output = forward(input);
+        int predicted = predict(output);
+        
+        if (predicted == sample->label) {
+            correct++;
+        }
+    }
+    
+    return static_cast<float>(correct) / batch.size();
+}
+
+float MLPNet::train_batch(const std::vector<MNISTSample*>& batch, float learning_rate) {
+    zero_grad();
+    
+    float total_loss = 0.0f;
+    
+    for (const auto* sample : batch) {
+        std::vector<float> input(sample->pixels.begin(), sample->pixels.end());
+        
+        auto output = forward(input);
+        
+        float max_logit = *std::max_element(output.begin(), output.end());
+        float sum_exp = 0.0f;
+        for (float o : output) sum_exp += std::exp(o - max_logit);
+        float log_prob = output[sample->label] - max_logit - std::log(sum_exp);
+        total_loss += -log_prob;
+        
+        backward(input, sample->label);
+    }
+    
+    float scale = 1.0f / batch.size();
+    for (auto& g : l1.weight_grad) g *= scale;
+    for (auto& g : l1.bias_grad) g *= scale;
+    for (auto& g : l2.weight_grad) g *= scale;
+    for (auto& g : l2.bias_grad) g *= scale;
+    for (auto& g : l3.weight_grad) g *= scale;
+    for (auto& g : l3.bias_grad) g *= scale;
+    for (auto& g : l4.weight_grad) g *= scale;
+    for (auto& g : l4.bias_grad) g *= scale;
+    
+    update(learning_rate);
+    
+    return total_loss / batch.size();
+}
