@@ -31,9 +31,10 @@ g++ -std=c++20 data.cpp model.cpp main.cpp -o mnist_train
 
 ### MNIST Training Benchmark (MLP, 5 Epochs)
 
-| Device | Total Time (s) | Avg Time/Epoch (s) | Test Accuracy (%) |
-|--------|----------------|------------------|-----------------|
-| Pytorch(CPU)    | 13.35          | 2.67             | 94.57           |
-| Pytorch(MPS)    | 8.61           | 1.72             | 94.96           |
-| C++ Native   |               |                |                |
-| C++ CUDA   |                |                  |                 |
+| **Device**        | **Total Time (s)** | **Avg Time / Epoch (s)** | **Test Accuracy (%)** |
+|--------------------|--------------------|---------------------------|-----------------------|
+| PyTorch (CPU)      | 13.35              | 2.67                      | 94.57                 |
+| PyTorch (MPS)      | 8.61               | 1.72                      | 94.96                 |
+| C++ (Native)       | 303.30             | 63.42                     | 94.26                 |
+| C++ (CUDA)         | —                  | —                         | —                     |
+
