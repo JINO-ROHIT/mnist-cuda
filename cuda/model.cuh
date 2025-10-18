@@ -32,8 +32,8 @@ class CUDALinear{
     public:
             CUDALinear(int in_features, int out_features, int max_batch_size); //constructor
             ~CUDALinear(); //destructor;
-            void forward(const float* x);
-            void backward(const float* grad_output);
+            void forward(float* input, float* output, int batch_size);
+            void backward(float* grad_output, float* grad_input, int batch_size);
             void zero_grad();
             void update(float* learning_rate);
 }
