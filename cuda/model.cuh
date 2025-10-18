@@ -30,7 +30,7 @@ class CUDALinear{
             size_t max_batch_size;
     
     public:
-            CUDALinear(int in_features, int out_features); //constructor
+            CUDALinear(int in_features, int out_features, int max_batch_size); //constructor
             ~CUDALinear(); //destructor;
             void forward(const float* x);
             void backward(const float* grad_output);
