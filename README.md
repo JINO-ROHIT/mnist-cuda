@@ -25,8 +25,15 @@ python3 mnist_benchmark.py --epochs 5 --device mps
 4. Run Native C++ baseline.
 
 ```cpp
-g++ -std=c++20 data.cpp model.cpp main.cpp -o mnist_train
-./mnist_train
+g++ -std=c++20 data.cpp model.cpp main.cpp -o mnist_cpu
+./mnist_cpu
+```
+
+5. Run CUDA C++ baseline.
+
+```cpp
+nvcc -std=c++20 -O3 model.cu data.cpp -o mnist_cuda
+./mnist_cuda
 ```
 
 ### MNIST Training Benchmark (MLP, 5 Epochs)
@@ -36,5 +43,4 @@ g++ -std=c++20 data.cpp model.cpp main.cpp -o mnist_train
 | PyTorch (CPU)      | 13.35              | 2.67                      | 94.57                 |
 | PyTorch (MPS)      | 8.61               | 1.72                      | 94.96                 |
 | C++ (Native)       | 303.30             | 63.42                     | 94.26                 |
-| C++ (CUDA)         | —                  | —                         | —                     |
-
+| C++ (CUDA)         | 26                 | 5.12                      | 99.95                 |
